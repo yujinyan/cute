@@ -22,7 +22,6 @@ var pathSplitter = func(c rune) bool {
 }
 
 func main() {
-	//dir = "/home/yujinyan/code/rutang-cluster"
 	roots = make(map[string]bool)
 	dir = os.Getenv("CUE_DIR")
 	files, err := ioutil.ReadDir(dir)
@@ -41,12 +40,12 @@ func main() {
 	}
 
 	http.HandleFunc("/", handler)
+	log.Println("cue server started")
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
 	pathComponents := strings.FieldsFunc(r.URL.Path, pathSplitter)
-	//match := pathRe.FindStringSubmatch(r.URL.Path)
 	root := pathComponents[0]
 	log.Printf("root is %s", root)
 	if !roots[root] {
@@ -87,41 +86,32 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	// eg. "./logging"
 	args := []string{"./" + root}
 	instances := load.Instances(args, &config)
-
 	if l := len(instances); l != 1 {
 		http.Error(w,
 			fmt.Sprintf("can only evaluate exactly 1 cue instance, received %v", l),
 			http.StatusBadRequest,
 		)
 	}
-
 	instance := instances[0]
 
 	values, err := ctx.BuildInstances(instances)
-
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-
-	if len(values) < 1 {
+	if l := len(values); l < 1 {
 		http.Error(w,
-			fmt.Sprintf("root %s contains %v values, should contain only 1", root, len(values)),
+			fmt.Sprintf("root %s contains %v values, should contain only 1", root, l),
 			http.StatusBadRequest)
 		return
 	}
-
 	value := values[0]
 
 	var selectors []cue.Selector
-
-	//log.Printf("package is %s\n", instances[0].ID())
-
 	for _, seg := range pathComponents[1:] {
 		if strings.HasPrefix(seg, "_") {
-			log.Printf("add hidden\n")
 			// https://github.com/cuelang/cue/issues/880
-			// id: module/dir:package
+			// id format: module/dir:package
 			selectors = append(selectors, cue.Hid(seg, instance.ID()))
 		} else if strings.HasPrefix(seg, "#") {
 			// character `#` must url encode to `%23`
@@ -130,18 +120,19 @@ func handler(w http.ResponseWriter, r *http.Request) {
 			selectors = append(selectors, cue.Str(seg))
 		}
 	}
-
 	path := cue.MakePath(selectors...)
-	log.Printf("path is %v\n", path)
-
 	value = value.LookupPath(path)
 
-	log.Printf("value is %v\n", value)
-
-	result, err := yaml.Encode(value)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	var result []byte
+	var resultErr error
+	if list, err := value.List(); err != nil {
+		result, resultErr = yaml.Encode(value)
+	} else {
+		result, resultErr = yaml.EncodeStream(list)
+	}
+	if resultErr != nil {
+		http.Error(w, resultErr.Error(), http.StatusBadRequest)
 		return
 	}
-	w.Write(result)
+	_, _ = w.Write(result)
 }
