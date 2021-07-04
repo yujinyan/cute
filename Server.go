@@ -6,6 +6,7 @@ import (
 	"cuelang.org/go/cue/load"
 	"cuelang.org/go/encoding/yaml"
 	"fmt"
+	"io/fs"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -34,9 +35,16 @@ func main() {
 		}
 		dir = s
 	}
-	files, err := ioutil.ReadDir(dir)
-	if err != nil {
-		log.Fatalln(err)
+
+	if err := os.Chdir(dir); err != nil {
+		panic(err)
+	}
+
+	var files []fs.FileInfo
+	if f, err := ioutil.ReadDir(dir); err == nil {
+		files = f
+	} else {
+		panic(err)
 	}
 
 	for _, file := range files {
@@ -104,18 +112,12 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	}
 	instance := instances[0]
 
-	values, err := ctx.BuildInstances(instances)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
+	var value cue.Value
+	if v := ctx.BuildInstance(instance); v.Err() == nil {
+		value = v
+	} else {
+		panic(v.Err())
 	}
-	if l := len(values); l != 1 {
-		http.Error(w,
-			fmt.Sprintf("root %s contains %v values, should contain only 1", root, l),
-			http.StatusBadRequest)
-		return
-	}
-	value := values[0]
 
 	var selectors []cue.Selector
 	for _, seg := range pathComponents[1:] {
