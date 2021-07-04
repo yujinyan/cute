@@ -10,6 +10,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -23,7 +24,16 @@ var pathSplitter = func(c rune) bool {
 
 func main() {
 	roots = make(map[string]bool)
-	dir = os.Getenv("CUE_DIR")
+	var dir string
+	if s := os.Getenv("CUE_DIR"); s != "" {
+		dir = s
+	} else {
+		s, err := filepath.Abs("./")
+		if err != nil {
+			panic(err)
+		}
+		dir = s
+	}
 	files, err := ioutil.ReadDir(dir)
 	if err != nil {
 		log.Fatalln(err)
@@ -40,7 +50,7 @@ func main() {
 	}
 
 	http.HandleFunc("/", handler)
-	log.Println("cue server started")
+	log.Printf("cue server started for dir %s\n", dir)
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
 
@@ -99,7 +109,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	if l := len(values); l < 1 {
+	if l := len(values); l != 1 {
 		http.Error(w,
 			fmt.Sprintf("root %s contains %v values, should contain only 1", root, l),
 			http.StatusBadRequest)
