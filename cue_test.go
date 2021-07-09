@@ -5,6 +5,7 @@ import (
 	"cuelang.org/go/cue/ast"
 	"cuelang.org/go/cue/format"
 	"cuelang.org/go/cue/token"
+	"fmt"
 	"log"
 	"testing"
 )
@@ -68,7 +69,11 @@ data: bar: "aGVsbG8gd29ybGQ="
 		panic(err)
 	}
 
-	log.Printf("v is %#v", redacted)
+	bytes, err := format.Node(redacted, format.Simplify())
+	if err != nil {
+		panic(err)
+	}
+	log.Println(string(bytes))
 }
 
 func TestAst(t *testing.T) {
@@ -89,6 +94,62 @@ func TestAst(t *testing.T) {
 		panic(err)
 	}
 	log.Println(string(node))
+}
+
+func TestInspectAst(t *testing.T) {
+	v := ctx.CompileString(`
+foo: bar: "baz"
+`)
+	s := v.Source().(*ast.File)
+	dcls := s.Decls
+	for _, dcl := range dcls {
+		field := dcl.(*ast.Field)
+		value := field.Value.(*ast.StructLit)
+		log.Printf("field is %+v", field)
+		log.Printf("value is %+v", value)
+		for _, elt := range value.Elts {
+			log.Printf("elt type %T", elt)
+			log.Printf("elt is %+v", elt)
+
+		}
+	}
+
+}
+
+func TestBuildFile(t *testing.T) {
+	f := &ast.File{
+		Decls: []ast.Decl{
+			&ast.Package{Name: ast.NewIdent("foo")},
+			//&ast.NewIdent("foo: bar"),
+			ast.NewStruct(
+				&ast.Field{
+					Label: ast.NewString("foo"),
+					Value: ast.NewString("hello"),
+				},
+				&ast.Field{
+					Label: ast.NewIdent("_bar"),
+					Value: ast.NewStruct(
+						&ast.Field{
+							Label: ast.NewString("baz"),
+							Value: ast.NewString("hello"),
+						},
+					),
+				},
+				&ast.Field{
+					Label: ast.NewString("s1"),
+					Value: ast.NewStruct(
+						"foo", ast.NewString("f"),
+						"baz", ast.NewString("b"),
+					),
+				},
+			),
+		},
+	}
+	v := ctx.BuildFile(f)
+	fmt.Printf("%#v", v)
+
+	bytes, _ := format.Node(f, format.Simplify())
+	log.Printf("result is %v", string(bytes))
 }
 
 func TestInstance(t *testing.T) {

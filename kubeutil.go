@@ -2,10 +2,11 @@ package main
 
 import (
 	"cuelang.org/go/cue"
+	"cuelang.org/go/cue/ast"
 	"encoding/base64"
 )
 
-func DecodeSecret(v *cue.Value) (*cue.Value, error) {
+func DecodeSecret(v *cue.Value) (*ast.StructLit, error) {
 	data := v.LookupPath(cue.ParsePath("data"))
 
 	fields, err := data.Fields()
@@ -38,5 +39,23 @@ func DecodeSecret(v *cue.Value) (*cue.Value, error) {
 		path := cue.MakePath(cue.Def("data"), selector)
 		ret = ret.FillPath(path, decoded)
 	}
-	return &ret, nil
+
+	syntax := ret.Syntax().(*ast.StructLit)
+	var dataIdx int
+	for i, elt := range syntax.Elts {
+		elt := elt.(*ast.Field)
+		label := elt.Label.(*ast.Ident)
+		if label.Name == "data" {
+			dataIdx = i
+			break
+		}
+	}
+	syntax.Elts = deleteAt(syntax.Elts, dataIdx)
+	return syntax, nil
+}
+
+func deleteAt(list []ast.Decl, idx int) []ast.Decl {
+	lastIdx := len(list) - 1
+	list[idx], list[lastIdx] = list[lastIdx], list[idx]
+	return list[:lastIdx]
 }
