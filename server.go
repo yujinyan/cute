@@ -2,7 +2,6 @@ package main
 
 import (
 	"cuelang.org/go/cue"
-	"cuelang.org/go/cue/cuecontext"
 	"cuelang.org/go/cue/load"
 	"cuelang.org/go/encoding/yaml"
 	"fmt"
@@ -15,7 +14,6 @@ import (
 	"strings"
 )
 
-var ctx = cuecontext.New()
 var dir string
 var roots map[string]bool
 var rootsList []string
