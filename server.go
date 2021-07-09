@@ -23,7 +23,7 @@ var pathSplitter = func(c rune) bool {
 	return c == '/'
 }
 
-func main() {
+func ServeCueFiles() {
 	roots = make(map[string]bool)
 	var dir string
 	if s := os.Getenv("CUE_DIR"); s != "" {
