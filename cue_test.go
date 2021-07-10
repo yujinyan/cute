@@ -188,6 +188,11 @@ func TestInstance(t *testing.T) {
 	log.Println(instance)
 }
 
+func TestGetTags(t *testing.T) {
+	// todo
+	// see cue/load/tags.go
+}
+
 func p(v interface{}) {
 	log.Printf("value is %v\n", v)
 }
@@ -225,7 +230,7 @@ func getInstance(dir string, root string) (*cue.Value, error) {
 	}
 	instance := instances[0]
 
-	//instance.AllTags
+	log.Printf("tags are %v", instance.AllTags)
 
 	var value cue.Value
 	if v := ctx.BuildInstance(instance); v.Err() == nil {
