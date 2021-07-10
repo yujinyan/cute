@@ -36,7 +36,7 @@ func DecodeSecret(v *cue.Value) (*ast.StructLit, error) {
 			decoded = d
 		}
 
-		path := cue.MakePath(cue.Def("data"), selector)
+		path := cue.MakePath(cue.Hid("_data", "_"), selector)
 		ret = ret.FillPath(path, decoded)
 	}
 
@@ -52,6 +52,39 @@ func DecodeSecret(v *cue.Value) (*ast.StructLit, error) {
 	}
 	syntax.Elts = deleteAt(syntax.Elts, dataIdx)
 	return syntax, nil
+}
+
+func BuildFile(labels *stringArray, pkgName string, s *ast.StructLit) *ast.File {
+
+	f := &ast.File{}
+
+	if pkgName != "" {
+		f.Decls = append(f.Decls, &ast.Package{Name: ast.NewIdent(pkgName)})
+	}
+
+	lastIdx := len(*labels) - 1
+
+	if lastIdx == -1 {
+		f.Decls = append(f.Decls, s)
+		return f
+	}
+
+	cur := &ast.Field{}
+	root := cur
+
+	for i, label := range *labels {
+		cur.Label = ast.NewIdent(label)
+		if i < lastIdx {
+			f := &ast.Field{}
+			cur.Value = ast.NewStruct(f)
+			cur = f
+		}
+	}
+
+	cur.Value = s
+	f.Decls = append(f.Decls, root)
+
+	return f
 }
 
 func deleteAt(list []ast.Decl, idx int) []ast.Decl {

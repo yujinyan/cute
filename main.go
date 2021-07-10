@@ -1,7 +1,6 @@
 package main
 
 import (
-	"cuelang.org/go/cue/ast"
 	"cuelang.org/go/cue/cuecontext"
 	"cuelang.org/go/cue/format"
 	"flag"
@@ -39,20 +38,8 @@ func main() {
 			panic(err)
 		}
 
-		f := &ast.File{}
+		f := BuildFile(&labelsArg, *packageArg, redacted)
 
-		if *packageArg != "" {
-			f.Decls = append(f.Decls, &ast.Package{Name: ast.NewIdent(*packageArg)})
-		}
-		f.Decls = append(f.Decls, &ast.Field{
-			Label: ast.NewIdent("_sealed"),
-			Value: ast.NewStruct(
-				&ast.Field{
-					Label: ast.NewIdent("foo"),
-					Value: redacted,
-				},
-			),
-		})
 		result, err := format.Node(f, format.Simplify())
 		if err != nil {
 			panic(err)

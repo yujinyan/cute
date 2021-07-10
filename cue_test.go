@@ -117,6 +117,27 @@ foo: bar: "baz"
 }
 
 func TestBuildFile(t *testing.T) {
+	v := ctx.CompileString(`
+d1: 1
+d2: 2
+`)
+	s := v.Syntax().(*ast.StructLit)
+	f := BuildFile(&stringArray{"foo", "bar", "baz"}, "myPackage", s)
+	bytes, err := format.Node(f, format.Simplify())
+	if err != nil {
+		panic(err)
+	}
+	log.Print(string(bytes))
+
+	f = BuildFile(&stringArray{}, "myPackage", s)
+	bytes, err = format.Node(f, format.Simplify())
+	if err != nil {
+		panic(err)
+	}
+	log.Print(string(bytes))
+}
+
+func TestBuildAstFile(t *testing.T) {
 	f := &ast.File{
 		Decls: []ast.Decl{
 			&ast.Package{Name: ast.NewIdent("foo")},
