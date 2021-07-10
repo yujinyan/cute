@@ -62,13 +62,12 @@ func BuildFile(labels *stringArray, pkgName string, s *ast.StructLit) *ast.File 
 		f.Decls = append(f.Decls, &ast.Package{Name: ast.NewIdent(pkgName)})
 	}
 
-	lastIdx := len(*labels) - 1
-
-	if lastIdx == -1 {
+	if labels == nil || len(*labels) == 0 {
 		f.Decls = append(f.Decls, s)
 		return f
 	}
 
+	lastIdx := len(*labels) - 1
 	cur := &ast.Field{}
 	root := cur
 

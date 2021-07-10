@@ -14,73 +14,40 @@ import (
 	"testing"
 )
 
-func TestLookupHidden(t *testing.T) {
+// Tests CUE api
+
+func TestLookupPath(t *testing.T) {
+	v := ctx.CompileString(`
+_v: 1
+v: 1
+`)
+
+	if i, _ := v.LookupPath(cue.MakePath(cue.Hid("_v", "_"))).Int64(); i != 1 {
+		t.Errorf("expect 1, got %v", i)
+	}
+
+	selector := cue.Hid("_v", "_")
+	path := cue.MakePath(selector)
+	log.Printf("type is %T", v.LookupPath(path))
+}
+
+func TestLookupPathsWithPackage(t *testing.T) {
 	v := ctx.CompileString(`
 package test
 _v: 1
 v: 1
 `)
 
-	selector := cue.Hid("_v", "_")
-	path := cue.MakePath(selector)
-	p(v.LookupPath(path))
-}
-
-func TestLookupNormalField(t *testing.T) {
-	v := ctx.CompileString(`
-package test
-_v: 1
-v: 1
-`)
-
-	selector := cue.Str("v")
-	path := cue.MakePath(selector)
-	p(v.LookupPath(path))
-}
-
-func TestLookupHidWithoutPackage(t *testing.T) {
-	v := ctx.CompileString(`
-_v: 1
-v: 1
-`)
-
-	selector := cue.Hid("_v", "_")
-	path := cue.MakePath(selector)
-	p(v.LookupPath(path))
-}
-
-func TestRedact(t *testing.T) {
-	v := ctx.CompileString(`
-kind:       "Secret"
-apiVersion: "v1"
-metadata: {
-	name:              "api-kt-config"
-	namespace:         "rutang-beta"
-	creationTimestamp: null
-	ownerReferences: [{
-		apiVersion: "bitnami.com/v1alpha1"
-		kind:       "SealedSecret"
-		name:       "api-kt-config"
-		uid:        ""
-		controller: true
-	}]
-}
-data: hello: "aGVsbG8gd29ybGQ="
-data: bar: "aGVsbG8gd29ybGQ="
-`)
-	redacted, err := DecodeSecret(&v)
-	if err != nil {
-		panic(err)
+	if got := v.LookupPath(cue.MakePath(cue.Hid("_v", "_"))); got.Kind() != cue.BottomKind {
+		t.Errorf("expect _|_, got %v", got)
 	}
 
-	bytes, err := format.Node(redacted, format.Simplify())
-	if err != nil {
-		panic(err)
+	if i, _ := v.LookupPath(cue.MakePath(cue.Str("v"))).Int64(); i != 1 {
+		t.Errorf("expect 1, got %v", i)
 	}
-	log.Println(string(bytes))
 }
 
-func TestAst(t *testing.T) {
+func TestBuildAst(t *testing.T) {
 	f := &ast.File{
 		Decls: []ast.Decl{
 			&ast.Package{Name: ast.NewIdent("foo")},
@@ -97,7 +64,14 @@ func TestAst(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	log.Println(string(node))
+
+	expect := `package foo
+
+1
+`
+	if got := string(node); got != expect {
+		t.Fatalf("expect %v, got %v", expect, got)
+	}
 }
 
 func TestInspectAst(t *testing.T) {
@@ -114,31 +88,8 @@ foo: bar: "baz"
 		for _, elt := range value.Elts {
 			log.Printf("elt type %T", elt)
 			log.Printf("elt is %+v", elt)
-
 		}
 	}
-
-}
-
-func TestBuildFile(t *testing.T) {
-	v := ctx.CompileString(`
-d1: 1
-d2: 2
-`)
-	s := v.Syntax().(*ast.StructLit)
-	f := BuildFile(&stringArray{"foo", "bar", "baz"}, "myPackage", s)
-	bytes, err := format.Node(f, format.Simplify())
-	if err != nil {
-		panic(err)
-	}
-	log.Print(string(bytes))
-
-	f = BuildFile(&stringArray{}, "myPackage", s)
-	bytes, err = format.Node(f, format.Simplify())
-	if err != nil {
-		panic(err)
-	}
-	log.Print(string(bytes))
 }
 
 func TestBuildAstFile(t *testing.T) {
@@ -191,10 +142,6 @@ func TestInstance(t *testing.T) {
 func TestGetTags(t *testing.T) {
 	// todo
 	// see cue/load/tags.go
-}
-
-func p(v interface{}) {
-	log.Printf("value is %v\n", v)
 }
 
 func sampleCuePath() string {
