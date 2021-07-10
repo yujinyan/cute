@@ -1,7 +1,6 @@
 package main
 
 import (
-	"log"
 	"strings"
 	"testing"
 )
@@ -11,7 +10,14 @@ var splitFn = func(c rune) bool {
 }
 
 func TestParsePath(t *testing.T) {
-	path := "/api-backend/objects"
+	path := "/foo/bar"
 	components := strings.FieldsFunc(path, splitFn)
-	log.Println(components)
+
+	if len(components) != 2 {
+		t.Fatalf("wrong size")
+	}
+
+	if components[0] != "foo" || components[1] != "bar" {
+		t.Fatalf("wrong content")
+	}
 }

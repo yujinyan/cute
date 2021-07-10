@@ -4,9 +4,13 @@ import (
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/ast"
 	"cuelang.org/go/cue/format"
+	"cuelang.org/go/cue/load"
 	"cuelang.org/go/cue/token"
+	"errors"
 	"fmt"
 	"log"
+	"path/filepath"
+	"runtime"
 	"testing"
 )
 
@@ -175,16 +179,60 @@ func TestBuildAstFile(t *testing.T) {
 
 func TestInstance(t *testing.T) {
 	var instance *cue.Value
-	if i, err := GetInstance("/home/yujinyan/code/rutang-cluster"); err != nil {
+	if i, err := getInstance(sampleCuePath(), "myapp"); err != nil {
 		panic(err)
 	} else {
 		instance = i
 	}
 
 	log.Println(instance)
-
 }
 
 func p(v interface{}) {
 	log.Printf("value is %v\n", v)
+}
+
+func sampleCuePath() string {
+	_, b, _, _ := runtime.Caller(0)
+	return filepath.Dir(b) + "/sample"
+}
+
+// getInstance https://pkg.go.dev/cuelang.org/go/cue
+func getInstance(dir string, root string) (*cue.Value, error) {
+	config := load.Config{
+		Context:    nil,
+		ModuleRoot: dir,
+		Module:     "",
+		Package:    "",
+		Dir:        dir,
+		//Tags:        tags,
+		TagVars:     nil,
+		AllCUEFiles: false,
+		Tests:       false,
+		Tools:       false,
+		DataFiles:   false,
+		StdRoot:     "",
+		ParseFile:   nil,
+		Overlay:     nil,
+		Stdin:       nil,
+	}
+
+	// eg. "./logging"
+	args := []string{"./" + root}
+	instances := load.Instances(args, &config)
+	if l := len(instances); l != 1 {
+		return nil, errors.New(fmt.Sprintf("can only evaluate exactly 1 cue instance, received %v", l))
+	}
+	instance := instances[0]
+
+	//instance.AllTags
+
+	var value cue.Value
+	if v := ctx.BuildInstance(instance); v.Err() == nil {
+		value = v
+	} else {
+		return nil, v.Err()
+	}
+
+	return &value, nil
 }
