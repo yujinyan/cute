@@ -1,4 +1,4 @@
-module cue.serve
+module cute.dev
 
 go 1.16
 
