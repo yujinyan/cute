@@ -1,3 +1,3 @@
 package cluster
 
-#namespace: string @tag(namespace)
+#namespace: *"default" | string @tag(namespace)
