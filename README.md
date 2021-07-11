@@ -1,6 +1,6 @@
 # Cute
 
-A small [cue-lang](https://github.com/cue-lang/cue) utility.
+A small [cue-lang](https://cuelang.org/) utility.
 
 ## Features
 
