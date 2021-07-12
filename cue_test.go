@@ -130,13 +130,16 @@ func TestBuildAstFile(t *testing.T) {
 
 func TestInstance(t *testing.T) {
 	var instance *cue.Value
-	if i, err := getInstance(sampleCuePath(), "myapp"); err != nil {
+	if i, err := getInstance(sampleCuePath(), "myapp/prod"); err != nil {
 		panic(err)
 	} else {
 		instance = i
 	}
 
-	log.Println(instance)
+	value := instance.LookupPath(cue.ParsePath(`secret["my-app-config"].metadata.namespace`))
+	if got, _ := value.String(); got != "prod" {
+		t.Fatalf(`expected "prod", got %v`, got)
+	}
 }
 
 func TestGetTags(t *testing.T) {

@@ -51,7 +51,7 @@ func ServeCueFiles() {
 		}
 	}
 
-	for dirname, _ := range roots {
+	for dirname := range roots {
 		rootsList = append(rootsList, dirname)
 	}
 
@@ -80,13 +80,14 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		}
 		tags = append(tags, fmt.Sprintf("%s=%s", key, values[0]))
 	}
+	cut := getDir(dir, pathComponents)
 	// https://pkg.go.dev/cuelang.org/go/cue
 	config := load.Config{
 		Context:     nil,
 		ModuleRoot:  dir,
 		Module:      "",
 		Package:     "",
-		Dir:         dir,
+		Dir:         filepath.Join(pathComponents[0:cut]...),
 		Tags:        tags,
 		TagVars:     nil,
 		AllCUEFiles: false,
@@ -99,9 +100,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		Stdin:       nil,
 	}
 
-	// eg. "./logging"
-	args := []string{"./" + root}
-	instances := load.Instances(args, &config)
+	instances := load.Instances(nil, &config)
 	if l := len(instances); l != 1 {
 		http.Error(w,
 			fmt.Sprintf("can only evaluate exactly 1 cue instance, received %v", l),
@@ -118,7 +117,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var selectors []cue.Selector
-	for _, seg := range pathComponents[1:] {
+	for _, seg := range pathComponents[cut:] {
 		if strings.HasPrefix(seg, "_") {
 			// https://github.com/cuelang/cue/issues/880
 			// id format: module/dir:package
@@ -145,4 +144,21 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	_, _ = w.Write(result)
+}
+
+// navigate down file path according to pathComponents
+func getDir(root string, pathComponents []string) int {
+	var i int = 1
+	for i <= len(pathComponents) {
+		comps := append([]string{root}, pathComponents[0:i]...)
+		cur := filepath.Join(comps...)
+		if _, err := os.Stat(cur); os.IsNotExist(err) {
+			break
+		} else if err == nil {
+			i++
+		} else {
+			panic(err)
+		}
+	}
+	return i - 1
 }
