@@ -23,7 +23,12 @@ func DecodeSecret(v *cue.Value) (*ast.StructLit, error) {
 		selector := selectors[len(selectors)-1]
 
 		var str string
-		if s, err := value.String(); err != nil {
+		if err := value.Null(); err == nil {
+			// `value` is null.
+			// Since Kubernetes Secret.data.<var> cannot be null,
+			// we substitute an empty string here.
+			str = ""
+		} else if s, err := value.String(); err != nil {
 			return nil, err
 		} else {
 			str = s

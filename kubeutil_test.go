@@ -26,6 +26,7 @@ metadata: {
 }
 data: foo: "aGVsbG8gd29ybGQ="
 data: bar: "aGVsbG8gd29ybGQ="
+data: empty: null
 `)
 	decoded, err := DecodeSecret(&v)
 	if err != nil {
