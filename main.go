@@ -4,6 +4,7 @@ import (
 	"cuelang.org/go/cue/cuecontext"
 	"cuelang.org/go/cue/format"
 	"flag"
+	"fmt"
 	"io/ioutil"
 	"os"
 )
@@ -21,13 +22,24 @@ func (i *stringArray) Set(value string) error {
 
 var ctx = cuecontext.New()
 var labelsArg stringArray
+var (
+	version = "dev"
+	date    = "unknown"
+	builtBy = "unknown"
+)
 
 func main() {
-	if hasStdIn() {
-		var packageArg = flag.String("p", "", "package name for generated cue file")
-		flag.Var(&labelsArg, "l", "label path")
-		flag.Parse()
+	var packageArg = flag.String("p", "", "package name for generated cue file")
+	var printVersion = flag.Bool("version", false, "print version")
+	flag.Var(&labelsArg, "l", "label path")
+	flag.Parse()
 
+	if *printVersion {
+		fmt.Printf("cute version: %s, built by %s on %s.\n", version, builtBy, date)
+		return
+	}
+
+	if hasStdIn() {
 		bytes, err := ioutil.ReadAll(os.Stdin)
 		if err != nil {
 			panic(err)
