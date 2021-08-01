@@ -56,17 +56,28 @@ func ServeCueFiles() {
 	}
 
 	http.HandleFunc("/", handler)
-	log.Printf("cue server started for dir %s\n", dir)
+	log.Printf("Starting cue server for dir %s\n", dir)
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
+	defer func() {
+		if e := recover(); e != nil {
+			log.Printf("Recovered from %v\n", e)
+			http.Error(w, "Internal error occurred", http.StatusInternalServerError)
+		}
+	}()
 	pathComponents := strings.FieldsFunc(r.URL.Path, pathSplitter)
+	if len(pathComponents) < 1 {
+		http.Error(w,
+			fmt.Sprintf("Invalid path. Available roots are %v", rootsList), http.StatusBadRequest)
+		return
+	}
 	root := pathComponents[0]
 	log.Printf("root is %s", root)
 	if !roots[root] {
 		http.Error(w,
-			fmt.Sprintf(`cannot find root "%s", available ones are %v`, root, rootsList),
+			fmt.Sprintf(`Cannot find root "%s", available ones are %v`, root, rootsList),
 			http.StatusBadRequest)
 		return
 	}
@@ -113,7 +124,11 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	if v := ctx.BuildInstance(instance); v.Err() == nil {
 		value = v
 	} else {
-		panic(v.Err())
+		http.Error(w,
+			fmt.Sprintf("Failed to build cue instance, error: %v.", v.Err().Error()),
+			http.StatusBadRequest,
+		)
+		return
 	}
 
 	var selectors []cue.Selector
