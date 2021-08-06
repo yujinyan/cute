@@ -1,0 +1,7 @@
+builds:
+  - env:
+      - CGO_ENABLED=0
+dockers:
+  - image_templates:
+      - ghcr.io/yujinyan/cute:{{ .Version }}
+      - ghcr.io/yujinyan/cute:latest
