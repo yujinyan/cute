@@ -1,3 +1,3 @@
 dockers:
   - image_templates:
-      - yujinyan/cute
+      - ghcr.io/yujinyan/cute:{{ .Version }}
